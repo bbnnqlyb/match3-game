@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="消消乐 - Match 3 小游戏">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>消消乐</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>消消乐</h1>
+            <div class="stats">
+                <div class="score">分数: <span id="score">0</span></div>
+                <div class="moves">步数: <span id="moves">30</span></div>
+            </div>
+        </div>
+        <div id="board" class="board"></div>
+        <div class="footer">
+            <button id="restart-btn">重新开始</button>
+        </div>
+        <div id="game-over" class="game-over hidden">
+            <div class="game-over-content">
+                <h2>游戏结束!</h2>
+                <p>最终分数: <span id="final-score">0</span></p>
+                <button id="play-again-btn">再来一局</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+    <script>
+        // 注册 Service Worker (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
