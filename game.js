@@ -9,8 +9,8 @@ const EMOJIS = ['🔴', '🟡', '🔵', '🟢', '🟣', '💗'];
 
 // 特殊宝石类型标记
 const SPECIAL_NONE = 0;
-const SPECIAL_BOMB = 1;    // 爆炸宝石
-const SPECIAL_VORTEX = 2;  // 消除漩涡
+const SPECIAL_BOMB = 1;    // 爆炸宝石：被同色消除时3x3爆炸
+const SPECIAL_VORTEX = 2;  // 消除漩涡：只能手动交换触发，清除全场同色
 
 let board = [];       // 普通类型 0-5
 let special = [];     // 特殊标记
@@ -19,7 +19,6 @@ let moves = 30;
 let selected = null;
 let isProcessing = false;
 let comboCount = 0;   // 当前连锁次数
-let newSpecials = new Set(); // 刚生成的特殊宝石（保护一轮不被连锁消除）
 
 const boardEl = document.getElementById('board');
 const scoreEl = document.getElementById('score');
@@ -36,7 +35,6 @@ function init() {
     selected = null;
     isProcessing = false;
     comboCount = 0;
-    newSpecials = new Set();
     updateUI();
     gameOverEl.classList.add('hidden');
     generateBoard();
@@ -147,7 +145,6 @@ async function trySwap(a, b) {
     if (spA === SPECIAL_VORTEX || spB === SPECIAL_VORTEX) {
         moves--;
         comboCount = 0;
-        newSpecials = new Set();
         updateUI();
         await handleVortexSwap(a, b);
         isProcessing = false;
@@ -163,7 +160,6 @@ async function trySwap(a, b) {
     if (matchResult.matches.length > 0) {
         moves--;
         comboCount = 0;
-        newSpecials = new Set();
         updateUI();
         await processMatches(matchResult);
     } else {
@@ -227,7 +223,7 @@ async function handleVortexSwap(a, b) {
     // 计分：漩涡消除算第一次消除，基础分不带倍数
     comboCount++;
     const baseScore = toRemove.length * 10;
-    score += baseScore; // 第一次不加倍
+    score += baseScore;
     updateUI();
 
     clearCells(toRemove);
@@ -251,19 +247,26 @@ function swap(a, b) {
     special[b.row][b.col] = temp;
 }
 
-// 查找所有匹配，并区分 4 连和 5 连
-// 跳过 newSpecials 中的位置（刚生成的特殊宝石保护一轮）
+// 查找所有匹配
+// 规则：消除漩涡（VORTEX）不参与自动匹配，视为断点
+//       爆炸宝石（BOMB）正常参与匹配（被匹配到时触发爆炸）
 function findMatches() {
     const matchGroups = [];
+
+    function canMatch(r, c) {
+        if (board[r][c] === -1) return false;
+        if (special[r][c] === SPECIAL_VORTEX) return false; // 漩涡不参与自动匹配
+        return true;
+    }
 
     // 横向
     for (let r = 0; r < ROWS; r++) {
         let c = 0;
         while (c < COLS) {
+            if (!canMatch(r, c)) { c++; continue; }
             const type = board[r][c];
-            if (type === -1 || newSpecials.has(`${r},${c}`)) { c++; continue; }
             let end = c;
-            while (end + 1 < COLS && board[r][end + 1] === type && !newSpecials.has(`${r},${end + 1}`)) end++;
+            while (end + 1 < COLS && canMatch(r, end + 1) && board[r][end + 1] === type) end++;
             const len = end - c + 1;
             if (len >= 3) {
                 const group = [];
@@ -280,10 +283,10 @@ function findMatches() {
     for (let c = 0; c < COLS; c++) {
         let r = 0;
         while (r < ROWS) {
+            if (!canMatch(r, c)) { r++; continue; }
             const type = board[r][c];
-            if (type === -1 || newSpecials.has(`${r},${c}`)) { r++; continue; }
             let end = r;
-            while (end + 1 < ROWS && board[end + 1][c] === type && !newSpecials.has(`${end + 1},${c}`)) end++;
+            while (end + 1 < ROWS && canMatch(end + 1, c) && board[end + 1][c] === type) end++;
             const len = end - r + 1;
             if (len >= 3) {
                 const group = [];
@@ -317,14 +320,69 @@ async function processMatches(matchResult) {
     // 连锁倍数
     comboCount++;
 
+    // 检查是否有爆炸宝石被匹配到
+    const triggeredBombs = [];
+    for (const { row, col } of matches) {
+        if (special[row][col] === SPECIAL_BOMB) {
+            triggeredBombs.push({ row, col });
+        }
+    }
+
+    // 如果有爆炸宝石被触发，扩大消除范围
+    const toRemoveSet = new Set(matches.map(m => `${m.row},${m.col}`));
+
+    for (const bomb of triggeredBombs) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                const nr = bomb.row + dr;
+                const nc = bomb.col + dc;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                    toRemoveSet.add(`${nr},${nc}`);
+                }
+            }
+        }
+    }
+
+    // 检查爆炸范围内是否有其他爆炸宝石（连锁爆炸）
+    let hasNewBombs = true;
+    const processedBombs = new Set(triggeredBombs.map(b => `${b.row},${b.col}`));
+    while (hasNewBombs) {
+        hasNewBombs = false;
+        const currentCells = Array.from(toRemoveSet).map(s => {
+            const [r, c] = s.split(',').map(Number);
+            return { row: r, col: c };
+        });
+        for (const { row, col } of currentCells) {
+            const key = `${row},${col}`;
+            if (special[row][col] === SPECIAL_BOMB && !processedBombs.has(key)) {
+                processedBombs.add(key);
+                hasNewBombs = true;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                            toRemoveSet.add(`${nr},${nc}`);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 最终消除列表（排除漩涡，漩涡不会被爆炸波及消除）
+    const finalRemove = Array.from(toRemoveSet).map(s => {
+        const [r, c] = s.split(',').map(Number);
+        return { row: r, col: c };
+    }).filter(({ row, col }) => special[row][col] !== SPECIAL_VORTEX);
+
     // 消除动画
-    await animateMatches(matches);
+    await animateMatches(finalRemove);
 
     // 计分规则：
-    // 第1次消除：基础分 = 块数 * 10（无倍数）
-    // 第N次连锁（N>=2）：基础分 + 额外 = 基础分 * N
-    // 即：第1次 x1，第2次 x2，第3次 x3...
-    const baseScore = matches.length * 10;
+    // 第1次消除：基础分（无倍数）
+    // 第N次连锁（N>=2）：基础分 + 基础分 * N
+    const baseScore = finalRemove.length * 10;
     if (comboCount === 1) {
         score += baseScore;
     } else {
@@ -332,50 +390,26 @@ async function processMatches(matchResult) {
     }
     updateUI();
 
-    // 决定生成特殊宝石（在清除前确定位置）
+    // 决定生成特殊宝石（基于原始匹配组，不含爆炸扩展）
     const specialToCreate = determineSpecials(groups);
 
     // 清除格子
-    clearCells(matches);
+    clearCells(finalRemove);
 
-    // 生成特殊宝石（写回到棋盘上，并标记为新生成）
+    // 生成特殊宝石
     specialToCreate.forEach(({ row, col, type, specialType }) => {
         board[row][col] = type;
         special[row][col] = specialType;
-        newSpecials.add(`${row},${col}`);
     });
 
     // 下落填充
     dropTiles();
     fillEmpty();
-
-    // 下落后特殊宝石位置可能变了，更新 newSpecials
-    updateNewSpecialsAfterDrop();
-
     renderBoard();
     await delay(300);
 
-    // 检查连锁（此时 newSpecials 保护特殊宝石不被匹配）
+    // 检查连锁
     await checkChain();
-
-    // 连锁结束后清除保护（下次玩家操作时特殊宝石可以正常参与）
-    // 注：这里不清除，在 trySwap 开头清除
-}
-
-// 下落后更新 newSpecials 的位置
-function updateNewSpecialsAfterDrop() {
-    // 重新扫描，找到所有特殊宝石的新位置
-    const updated = new Set();
-    for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-            if (special[r][c] !== SPECIAL_NONE) {
-                // 检查这个特殊宝石是不是我们刚创建的
-                // 简单做法：保护所有特殊宝石一轮
-                updated.add(`${r},${c}`);
-            }
-        }
-    }
-    newSpecials = updated;
 }
 
 // 确定要生成的特殊宝石
@@ -388,7 +422,6 @@ function determineSpecials(groups) {
 
     for (const group of sortedGroups) {
         if (group.length >= 5) {
-            // 5连 -> 消除漩涡，生成在中间位置
             const mid = Math.floor(group.cells.length / 2);
             const pos = group.cells[mid];
             const key = `${pos.row},${pos.col}`;
@@ -402,7 +435,6 @@ function determineSpecials(groups) {
                 usedPositions.add(key);
             }
         } else if (group.length === 4) {
-            // 4连 -> 爆炸宝石，生成在中间位置
             const mid = Math.floor(group.cells.length / 2);
             const pos = group.cells[mid];
             const key = `${pos.row},${pos.col}`;
@@ -421,108 +453,11 @@ function determineSpecials(groups) {
     return specials;
 }
 
-// 检查连锁反应（包含爆炸宝石触发）
+// 检查连锁反应
 async function checkChain() {
-    // 先检查普通匹配（跳过受保护的特殊宝石）
     const matchResult = findMatches();
-
     if (matchResult.matches.length > 0) {
-        // 检查匹配中是否有爆炸宝石被触发
-        const triggeredBombs = [];
-        for (const { row, col } of matchResult.matches) {
-            if (special[row][col] === SPECIAL_BOMB) {
-                triggeredBombs.push({ row, col });
-            }
-        }
-
-        if (triggeredBombs.length > 0) {
-            await processBombs(triggeredBombs, matchResult);
-        } else {
-            // 连锁前清除保护（让这一轮的特殊宝石下一轮可以被匹配）
-            newSpecials = new Set();
-            await processMatches(matchResult);
-        }
-    } else {
-        // 没有更多匹配，连锁结束，清除保护
-        newSpecials = new Set();
-    }
-}
-
-// 处理爆炸宝石
-async function processBombs(bombs, matchResult) {
-    comboCount++;
-    // 清除保护
-    newSpecials = new Set();
-
-    // 收集所有要消除的格子
-    const toRemove = new Set();
-
-    // 普通匹配
-    matchResult.matches.forEach(m => toRemove.add(`${m.row},${m.col}`));
-
-    // 爆炸范围（3x3）
-    for (const bomb of bombs) {
-        for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-                const nr = bomb.row + dr;
-                const nc = bomb.col + dc;
-                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-                    toRemove.add(`${nr},${nc}`);
-                }
-            }
-        }
-    }
-
-    const allMatches = Array.from(toRemove).map(s => {
-        const [r, c] = s.split(',').map(Number);
-        return { row: r, col: c };
-    });
-
-    // 检查爆炸范围内是否有其他爆炸宝石（连锁爆炸）
-    const chainBombs = [];
-    for (const { row, col } of allMatches) {
-        if (special[row][col] === SPECIAL_BOMB && !bombs.some(b => b.row === row && b.col === col)) {
-            chainBombs.push({ row, col });
-        }
-    }
-
-    // 消除动画
-    await animateMatches(allMatches);
-
-    // 计分
-    const baseScore = allMatches.length * 10;
-    if (comboCount === 1) {
-        score += baseScore;
-    } else {
-        score += baseScore + baseScore * comboCount;
-    }
-    updateUI();
-
-    // 确定新的特殊宝石
-    const specialToCreate = determineSpecials(matchResult.groups);
-    const validSpecials = specialToCreate.filter(s => !toRemove.has(`${s.row},${s.col}`));
-
-    clearCells(allMatches);
-
-    validSpecials.forEach(({ row, col, type, specialType }) => {
-        board[row][col] = type;
-        special[row][col] = specialType;
-        newSpecials.add(`${row},${col}`);
-    });
-
-    dropTiles();
-    fillEmpty();
-    updateNewSpecialsAfterDrop();
-    renderBoard();
-    await delay(300);
-
-    // 如果有连锁爆炸，继续处理
-    if (chainBombs.length > 0) {
-        // 重新查找匹配以传递给 processBombs
-        const newMatchResult = findMatches();
-        await processBombs(chainBombs, newMatchResult);
-    } else {
-        await checkChain();
+        await processMatches(matchResult);
     }
 }
 
@@ -540,7 +475,6 @@ function clearCells(cells) {
     cells.forEach(({ row, col }) => {
         board[row][col] = -1;
         special[row][col] = SPECIAL_NONE;
-        newSpecials.delete(`${row},${col}`);
     });
 }
 
@@ -559,7 +493,6 @@ function dropTiles() {
                 emptyRow--;
             }
         }
-        // 上面剩余的空位清空
         for (let r = emptyRow; r >= 0; r--) {
             board[r][c] = -1;
             special[r][c] = SPECIAL_NONE;
