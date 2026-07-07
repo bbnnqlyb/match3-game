@@ -696,6 +696,7 @@ function checkLevelUp() {
         levelUpTextEl.textContent = '第' + level + '关 通过!';
         nextLevelEl.textContent = level + 1;
         levelUpEl.classList.remove('hidden');
+        // TODO: 接入广告后，level >= 2 时在此处调用 showAd(() => startNextLevel())
         setTimeout(startNextLevel, 1500);
         return true;
     }
