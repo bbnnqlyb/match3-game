@@ -188,8 +188,10 @@ async function trySwap(a, b) {
 }
 
 // 两个爆炸宝石交换：都爆炸（两个3x3范围）
+// 爆炸范围内的漩涡也会被触发，消除颜色取决于第一个选中的宝石(a)的颜色
 async function handleDoubleBombSwap(a, b) {
     comboCount = 1;
+    const triggerColor = board[a.row][a.col]; // 第一个选中的宝石颜色
 
     // 收集两个炸弹的3x3范围
     const toRemoveSet = new Set();
@@ -229,11 +231,31 @@ async function handleDoubleBombSwap(a, b) {
         }
     }
 
-    // 排除漩涡
+    // 检查爆炸范围内是否有漩涡，触发漩涡效果
+    const triggeredVortexColors = new Set();
+    for (const s of toRemoveSet) {
+        const [r, c] = s.split(',').map(Number);
+        if (special[r][c] === SPECIAL_VORTEX) {
+            triggeredVortexColors.add(triggerColor);
+        }
+    }
+
+    // 如果有漩涡被波及，把全场该颜色的块也加入消除范围
+    if (triggeredVortexColors.size > 0) {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (board[r][c] === triggerColor) {
+                    toRemoveSet.add(`${r},${c}`);
+                }
+            }
+        }
+    }
+
+    // 全部消除（包括漩涡）
     const finalRemove = Array.from(toRemoveSet).map(s => {
         const [r, c] = s.split(',').map(Number);
         return { row: r, col: c };
-    }).filter(({ row, col }) => special[row][col] !== SPECIAL_VORTEX);
+    });
 
     renderBoard();
     await animateMatches(finalRemove);
@@ -452,11 +474,31 @@ async function processMatches(matchResult) {
         }
     }
 
-    // 最终消除列表（排除漩涡，漩涡不会被爆炸波及消除）
+    // 检查爆炸范围内是否有漩涡被波及
+    // 如果有，触发漩涡效果：消除全场该颜色（颜色取触发匹配的颜色）
+    const vortexTriggerColor = triggeredBombs.length > 0 ? board[triggeredBombs[0].row][triggeredBombs[0].col] : null;
+    let hasVortexTriggered = false;
+    for (const s of toRemoveSet) {
+        const [r, c] = s.split(',').map(Number);
+        if (special[r][c] === SPECIAL_VORTEX) {
+            hasVortexTriggered = true;
+        }
+    }
+    if (hasVortexTriggered && vortexTriggerColor !== null) {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (board[r][c] === vortexTriggerColor) {
+                    toRemoveSet.add(`${r},${c}`);
+                }
+            }
+        }
+    }
+
+    // 最终消除列表（全部消除，包括漩涡）
     const finalRemove = Array.from(toRemoveSet).map(s => {
         const [r, c] = s.split(',').map(Number);
         return { row: r, col: c };
-    }).filter(({ row, col }) => special[row][col] !== SPECIAL_VORTEX);
+    });
 
     // 消除动画
     await animateMatches(finalRemove);
