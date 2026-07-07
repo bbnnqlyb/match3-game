@@ -154,6 +154,9 @@ body {
     width: min(90vw, 90vmin, 420px);
     height: min(90vw, 90vmin, 420px);
     aspect-ratio: 1;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .tile {
