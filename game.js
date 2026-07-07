@@ -420,25 +420,49 @@ async function processMatches(matchResult) {
 }
 
 // 确定要生成的特殊宝石
+// 规则：
+//   - 单组4连 或 两组交叉（T/L形，总块数>=4）-> 爆炸宝石
+//   - 单组5连 或 两组交叉（总块数>=5）-> 消除漩涡
 function determineSpecials(groups) {
     const specials = [];
     const usedPositions = new Set();
 
-    // 按长度降序排列，优先处理 5 连
-    const sortedGroups = [...groups].sort((a, b) => b.length - a.length);
+    // 先检查是否有交叉组（同色，一横一纵，共享一个格子）
+    for (let i = 0; i < groups.length; i++) {
+        for (let j = i + 1; j < groups.length; j++) {
+            const gi = groups[i], gj = groups[j];
+            if (gi.type !== gj.type) continue;
+            if (gi.direction === gj.direction) continue; // 必须一横一纵
+            // 找交叉点
+            const setI = new Set(gi.cells.map(c => `${c.row},${c.col}`));
+            const intersection = gj.cells.filter(c => setI.has(`${c.row},${c.col}`));
+            if (intersection.length > 0) {
+                const crossPoint = intersection[0];
+                const key = `${crossPoint.row},${crossPoint.col}`;
+                if (usedPositions.has(key)) continue;
+                // 总块数 = 两组去重
+                const allCells = new Set([...gi.cells.map(c => `${c.row},${c.col}`), ...gj.cells.map(c => `${c.row},${c.col}`)]);
+                const totalLen = allCells.size;
+                if (totalLen >= 5) {
+                    specials.push({ row: crossPoint.row, col: crossPoint.col, type: gi.type, specialType: SPECIAL_VORTEX });
+                    usedPositions.add(key);
+                } else if (totalLen >= 4) {
+                    specials.push({ row: crossPoint.row, col: crossPoint.col, type: gi.type, specialType: SPECIAL_BOMB });
+                    usedPositions.add(key);
+                }
+            }
+        }
+    }
 
+    // 再处理单独的长组（没有被交叉处理过的）
+    const sortedGroups = [...groups].sort((a, b) => b.length - a.length);
     for (const group of sortedGroups) {
         if (group.length >= 5) {
             const mid = Math.floor(group.cells.length / 2);
             const pos = group.cells[mid];
             const key = `${pos.row},${pos.col}`;
             if (!usedPositions.has(key)) {
-                specials.push({
-                    row: pos.row,
-                    col: pos.col,
-                    type: group.type,
-                    specialType: SPECIAL_VORTEX
-                });
+                specials.push({ row: pos.row, col: pos.col, type: group.type, specialType: SPECIAL_VORTEX });
                 usedPositions.add(key);
             }
         } else if (group.length === 4) {
@@ -446,12 +470,7 @@ function determineSpecials(groups) {
             const pos = group.cells[mid];
             const key = `${pos.row},${pos.col}`;
             if (!usedPositions.has(key)) {
-                specials.push({
-                    row: pos.row,
-                    col: pos.col,
-                    type: group.type,
-                    specialType: SPECIAL_BOMB
-                });
+                specials.push({ row: pos.row, col: pos.col, type: group.type, specialType: SPECIAL_BOMB });
                 usedPositions.add(key);
             }
         }
