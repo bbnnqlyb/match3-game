@@ -129,6 +129,51 @@ body {
 .tile-4 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
 .tile-5 { background: linear-gradient(135deg, #fd79a8, #e84393); }
 
+/* 爆炸宝石 */
+.tile.bomb {
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    animation: bombGlow 1s infinite alternate;
+}
+
+@keyframes bombGlow {
+    from { box-shadow: 0 0 5px rgba(255, 200, 0, 0.5); }
+    to { box-shadow: 0 0 15px rgba(255, 200, 0, 0.9); }
+}
+
+/* 消除漩涡 */
+.tile.vortex {
+    background: radial-gradient(circle, #fff 0%, #333 40%, #000 100%) !important;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    animation: vortexSpin 2s linear infinite;
+}
+
+@keyframes vortexSpin {
+    from { box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); }
+    50% { box-shadow: 0 0 20px rgba(200, 150, 255, 0.9); }
+    to { box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); }
+}
+
+/* 连击提示 */
+.combo-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    pointer-events: none;
+    animation: comboFade 0.8s ease-out forwards;
+    z-index: 50;
+}
+
+@keyframes comboFade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+}
+
 .footer {
     text-align: center;
     margin-top: 15px;
