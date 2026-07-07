@@ -142,10 +142,21 @@ function isAdjacent(a, b) {
 async function trySwap(a, b) {
     isProcessing = true;
 
-    // 漩涡特殊处理：漩涡与任意宝石交换都有效
     const spA = special[a.row][a.col];
     const spB = special[b.row][b.col];
 
+    // 两个爆炸宝石交换：无论颜色，都直接爆炸
+    if (spA === SPECIAL_BOMB && spB === SPECIAL_BOMB) {
+        moves--;
+        comboCount = 0;
+        updateUI();
+        await handleDoubleBombSwap(a, b);
+        isProcessing = false;
+        if (moves <= 0) endGame();
+        return;
+    }
+
+    // 漩涡特殊处理：漩涡与任意宝石交换都有效
     if (spA === SPECIAL_VORTEX || spB === SPECIAL_VORTEX) {
         moves--;
         comboCount = 0;
@@ -174,6 +185,73 @@ async function trySwap(a, b) {
 
     isProcessing = false;
     if (moves <= 0) endGame();
+}
+
+// 两个爆炸宝石交换：都爆炸（两个3x3范围）
+async function handleDoubleBombSwap(a, b) {
+    comboCount = 1;
+
+    // 收集两个炸弹的3x3范围
+    const toRemoveSet = new Set();
+    for (const bomb of [a, b]) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                const nr = bomb.row + dr;
+                const nc = bomb.col + dc;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                    toRemoveSet.add(`${nr},${nc}`);
+                }
+            }
+        }
+    }
+
+    // 连锁检查：范围内的其他爆炸宝石也要爆炸
+    const processedBombs = new Set([`${a.row},${a.col}`, `${b.row},${b.col}`]);
+    let hasNewBombs = true;
+    while (hasNewBombs) {
+        hasNewBombs = false;
+        for (const s of toRemoveSet) {
+            const [r, c] = s.split(',').map(Number);
+            const key = `${r},${c}`;
+            if (special[r][c] === SPECIAL_BOMB && !processedBombs.has(key)) {
+                processedBombs.add(key);
+                hasNewBombs = true;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = r + dr;
+                        const nc = c + dc;
+                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                            toRemoveSet.add(`${nr},${nc}`);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 排除漩涡
+    const finalRemove = Array.from(toRemoveSet).map(s => {
+        const [r, c] = s.split(',').map(Number);
+        return { row: r, col: c };
+    }).filter(({ row, col }) => special[row][col] !== SPECIAL_VORTEX);
+
+    renderBoard();
+    await animateMatches(finalRemove);
+
+    // 计分
+    const baseScore = finalRemove.length * 10;
+    score += baseScore;
+    updateUI();
+    showComboWord(comboCount);
+
+    clearCells(finalRemove);
+    dropTiles();
+    fillEmpty();
+    renderBoard();
+    await delay(300);
+
+    // 检查连锁
+    await checkChain();
 }
 
 // 漩涡交换处理
