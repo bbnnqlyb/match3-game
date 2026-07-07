@@ -27,6 +27,10 @@ const gameOverEl = document.getElementById('game-over');
 const finalScoreEl = document.getElementById('final-score');
 const restartBtn = document.getElementById('restart-btn');
 const playAgainBtn = document.getElementById('play-again-btn');
+const comboTextEl = document.getElementById('combo-text');
+
+// 连击评价词
+const COMBO_WORDS = ['Good!', 'Wonderful!', 'Beautiful!', 'Amazing!', 'Unbelievable!', 'GODLIKE!'];
 
 // 初始化游戏
 function init() {
@@ -390,6 +394,9 @@ async function processMatches(matchResult) {
     }
     updateUI();
 
+    // 显示评价词
+    showComboWord(comboCount);
+
     // 决定生成特殊宝石（基于原始匹配组，不含爆炸扩展）
     const specialToCreate = determineSpecials(groups);
 
@@ -527,6 +534,17 @@ function endGame() {
 // 工具函数
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 显示连击评价词
+function showComboWord(combo) {
+    if (combo < 1) return;
+    const idx = Math.min(combo - 1, COMBO_WORDS.length - 1);
+    comboTextEl.textContent = COMBO_WORDS[idx];
+    comboTextEl.classList.remove('show');
+    // 触发 reflow 以重新启动动画
+    void comboTextEl.offsetWidth;
+    comboTextEl.classList.add('show');
 }
 
 // 禁止移动端缩放和长按

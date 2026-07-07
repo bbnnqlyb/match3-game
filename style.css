@@ -153,25 +153,30 @@ body {
     to { box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); }
 }
 
-/* 连击提示 */
+/* 连击评价词 */
 .combo-text {
     position: absolute;
-    top: 50%;
+    top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 6vmin, 2.5rem);
     font-weight: bold;
     color: #ffd700;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 150, 0, 0.5);
     pointer-events: none;
-    animation: comboFade 0.8s ease-out forwards;
     z-index: 50;
+    opacity: 0;
+}
+
+.combo-text.show {
+    animation: comboFade 1s ease-out forwards;
 }
 
 @keyframes comboFade {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    60% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); }
 }
 
 .footer {
