@@ -18,18 +18,30 @@
             <h1>消消乐</h1>
             <div class="stats">
                 <div class="score">分数: <span id="score">0</span></div>
+                <div class="level">关卡: <span id="level">1</span></div>
                 <div class="moves">步数: <span id="moves">30</span></div>
+            </div>
+            <div class="target-bar">
+                <div class="target-text">目标: <span id="target">300</span></div>
+                <div class="progress-bg"><div id="progress" class="progress-fill"></div></div>
             </div>
         </div>
         <div id="board" class="board"></div>
         <div id="combo-text" class="combo-text"></div>
+        <div id="level-up" class="level-up hidden">
+            <div class="level-up-content">
+                <h2 id="level-up-text">过关!</h2>
+                <p>进入第 <span id="next-level">2</span> 关</p>
+            </div>
+        </div>
         <div class="footer">
             <button id="restart-btn">重新开始</button>
         </div>
         <div id="game-over" class="game-over hidden">
             <div class="game-over-content">
                 <h2>游戏结束!</h2>
-                <p>最终分数: <span id="final-score">0</span></p>
+                <p>通过关卡: <span id="final-level">1</span></p>
+                <p>总分: <span id="final-score">0</span></p>
                 <button id="play-again-btn">再来一局</button>
             </div>
         </div>

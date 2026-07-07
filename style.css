@@ -46,7 +46,7 @@ body {
     gap: 20px;
 }
 
-.score, .moves {
+.score, .moves, .level {
     color: #fff;
     font-size: 1rem;
     background: rgba(255, 255, 255, 0.1);
@@ -55,9 +55,91 @@ body {
     backdrop-filter: blur(5px);
 }
 
-.score span, .moves span {
+.score span, .moves span, .level span {
     font-weight: bold;
     color: #ffd700;
+}
+
+.target-bar {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+}
+
+.target-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.target-text span {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.progress-bg {
+    width: 150px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd700, #ff6600);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* 过关提示 */
+.level-up {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    z-index: 90;
+    animation: levelFadeIn 0.3s ease;
+}
+
+.level-up.hidden {
+    display: none;
+}
+
+.level-up-content {
+    text-align: center;
+    color: #fff;
+    animation: levelBounce 0.6s ease;
+}
+
+.level-up-content h2 {
+    font-size: 2.5rem;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    margin-bottom: 10px;
+}
+
+.level-up-content p {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+@keyframes levelFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes levelBounce {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 .board {
