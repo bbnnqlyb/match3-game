@@ -4,8 +4,8 @@
 
 const ROWS = 8;
 const COLS = 8;
-const TYPES = 6;
-const EMOJIS = ['🔴', '🟡', '🔵', '🟢', '🟣', '💗'];
+const TYPES = 5;
+const EMOJIS = ['🔴', '🟡', '🔵', '🟢', '🟣'];
 
 // 特殊宝石类型标记
 const SPECIAL_NONE = 0;
@@ -764,6 +764,30 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 // 事件绑定
 restartBtn.addEventListener('click', init);
 playAgainBtn.addEventListener('click', init);
+
+// 测试模式：按 T 键在随机位置放置特殊宝石
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'b' || e.key === 'B') {
+        // 放一个爆炸宝石在(4,4)
+        special[4][4] = SPECIAL_BOMB;
+        renderBoard();
+        console.log('已放置爆炸宝石在(4,4), 颜色=' + board[4][4]);
+    }
+    if (e.key === 'v' || e.key === 'V') {
+        // 放一个漩涡在(4,4)
+        special[4][4] = SPECIAL_VORTEX;
+        renderBoard();
+        console.log('已放置漩涡在(4,4), 颜色=' + board[4][4]);
+    }
+    if (e.key === 't' || e.key === 'T') {
+        // 制造T形：在(6,3)(6,4)(6,5)横3 + (5,4)(6,4)(7,4)纵3
+        const color = board[6][4];
+        board[6][3] = color; board[6][5] = color;
+        board[5][4] = color; board[7][4] = color;
+        renderBoard();
+        console.log('已制造T形，颜色=' + color + '，交换任意相邻块触发');
+    }
+});
 
 // 启动游戏
 init();
