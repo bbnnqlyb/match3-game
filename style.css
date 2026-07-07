@@ -199,9 +199,9 @@ body {
 }
 
 @keyframes explode {
-    0% { transform: scale(1); opacity: 1; background: inherit; }
-    30% { transform: scale(1.4); opacity: 1; background: #ff6600; box-shadow: 0 0 20px #ff6600; }
-    60% { transform: scale(0.8); opacity: 0.6; background: #ff3300; }
+    0% { transform: scale(1); opacity: 1; }
+    30% { transform: scale(1.4); opacity: 1; background: #ff6600 !important; box-shadow: 0 0 20px #ff6600; }
+    60% { transform: scale(0.8); opacity: 0.6; background: #ff3300 !important; }
     100% { transform: scale(0); opacity: 0; }
 }
 

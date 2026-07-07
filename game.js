@@ -40,7 +40,7 @@ const finalScoreEl = document.getElementById('final-score');
 const finalLevelEl = document.getElementById('final-level');
 const restartBtn = document.getElementById('restart-btn');
 const playAgainBtn = document.getElementById('play-again-btn');
-const comboTextEl = document.getElementById('combo-text');
+let comboTextEl = document.getElementById('combo-text');
 const levelUpEl = document.getElementById('level-up');
 const levelUpTextEl = document.getElementById('level-up-text');
 const nextLevelEl = document.getElementById('next-level');
@@ -864,11 +864,12 @@ function delay(ms) {
 function showComboWord(combo) {
     if (combo < 1) return;
     const idx = Math.min(combo - 1, COMBO_WORDS.length - 1);
-    comboTextEl.textContent = COMBO_WORDS[idx];
-    comboTextEl.classList.remove('show');
-    // 触发 reflow 以重新启动动画
-    void comboTextEl.offsetWidth;
-    comboTextEl.classList.add('show');
+    // 克隆替换节点来确保动画重新触发（兼容所有移动浏览器）
+    const newEl = comboTextEl.cloneNode(false);
+    newEl.textContent = COMBO_WORDS[idx];
+    newEl.classList.add('show');
+    comboTextEl.parentNode.replaceChild(newEl, comboTextEl);
+    comboTextEl = newEl;
 }
 
 // 禁止移动端缩放和长按
