@@ -269,7 +269,21 @@ async function handleDoubleBombSwap(a, b) {
     });
 
     renderBoard();
-    await animateMatches(finalRemove);
+
+    // 爆炸动画：先炸弹本身，再扩展范围
+    const bombCells = [a, b];
+    bombCells.forEach(({ row, col }) => {
+        const el = getTileEl(row, col);
+        if (el) el.classList.add('bomb-trigger');
+    });
+    await delay(300);
+    finalRemove.forEach(({ row, col }) => {
+        if (!(row === a.row && col === a.col) && !(row === b.row && col === b.col)) {
+            const el = getTileEl(row, col);
+            if (el) el.classList.add('exploded');
+        }
+    });
+    await delay(400);
 
     // 计分
     const baseScore = finalRemove.length * 10;
@@ -331,7 +345,20 @@ async function handleBombVortexSwap(a, b) {
     });
 
     renderBoard();
-    await animateMatches(finalRemove);
+
+    // 动画：爆炸宝石先爆，漩涡同色消除
+    const el1 = getTileEl(bombPos.row, bombPos.col);
+    if (el1) el1.classList.add('bomb-trigger');
+    const el2 = getTileEl(vortexPos.row, vortexPos.col);
+    if (el2) el2.classList.add('matched');
+    await delay(300);
+    finalRemove.forEach(({ row, col }) => {
+        if (!(row === bombPos.row && col === bombPos.col) && !(row === vortexPos.row && col === vortexPos.col)) {
+            const el = getTileEl(row, col);
+            if (el) el.classList.add('exploded');
+        }
+    });
+    await delay(400);
 
     const baseScore = finalRemove.length * 10;
     score += baseScore;
@@ -571,8 +598,37 @@ async function processMatches(matchResult) {
         return { row: r, col: c };
     });
 
-    // 消除动画
-    await animateMatches(finalRemove);
+    // 分阶段动画：先消除匹配块，再爆炸扩展块
+    const matchSet = new Set(matches.map(m => `${m.row},${m.col}`));
+    const matchOnly = finalRemove.filter(({ row, col }) => matchSet.has(`${row},${col}`));
+    const explodeOnly = finalRemove.filter(({ row, col }) => !matchSet.has(`${row},${col}`));
+
+    if (triggeredBombs.length > 0) {
+        // 第一阶段：匹配块消除 + 爆炸宝石放大爆炸动画
+        matchOnly.forEach(({ row, col }) => {
+            const el = getTileEl(row, col);
+            if (el) {
+                if (special[row][col] === SPECIAL_BOMB) {
+                    el.classList.add('bomb-trigger');
+                } else {
+                    el.classList.add('matched');
+                }
+            }
+        });
+        await delay(300);
+
+        // 第二阶段：爆炸扩展范围的格子用爆炸动画
+        if (explodeOnly.length > 0) {
+            explodeOnly.forEach(({ row, col }) => {
+                const el = getTileEl(row, col);
+                if (el) el.classList.add('exploded');
+            });
+            await delay(400);
+        }
+    } else {
+        // 没有爆炸宝石，普通消除动画
+        await animateMatches(finalRemove);
+    }
 
     // 计分规则：
     // 第1次消除：基础分（无倍数）
