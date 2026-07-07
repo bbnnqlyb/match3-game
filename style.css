@@ -258,27 +258,27 @@ body {
 
 /* 连击评价词 */
 .combo-text {
-    position: absolute;
-    top: 45%;
+    position: fixed;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: clamp(1.5rem, 6vmin, 2.5rem);
+    font-size: clamp(2rem, 8vmin, 3rem);
     font-weight: bold;
     color: #ffd700;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 150, 0, 0.5);
     pointer-events: none;
-    z-index: 50;
+    z-index: 200;
     opacity: 0;
 }
 
 .combo-text.show {
-    animation: comboFade 1s ease-out forwards;
+    animation: comboFade 1.2s ease-out forwards;
 }
 
 @keyframes comboFade {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
-    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    60% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+    40% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); }
 }
 
