@@ -156,6 +156,17 @@ async function trySwap(a, b) {
         return;
     }
 
+    // 爆炸宝石 + 漩涡交换：两者都触发，叠加效果
+    if ((spA === SPECIAL_BOMB && spB === SPECIAL_VORTEX) || (spA === SPECIAL_VORTEX && spB === SPECIAL_BOMB)) {
+        moves--;
+        comboCount = 0;
+        updateUI();
+        await handleBombVortexSwap(a, b);
+        isProcessing = false;
+        if (moves <= 0) endGame();
+        return;
+    }
+
     // 漩涡特殊处理：漩涡与任意宝石交换都有效
     if (spA === SPECIAL_VORTEX || spB === SPECIAL_VORTEX) {
         moves--;
@@ -273,6 +284,66 @@ async function handleDoubleBombSwap(a, b) {
     await delay(300);
 
     // 检查连锁
+    await checkChain();
+}
+
+// 爆炸宝石 + 漩涡交换：漩涡消除全场该色 + 爆炸3x3范围
+async function handleBombVortexSwap(a, b) {
+    comboCount = 1;
+    const bombPos = special[a.row][a.col] === SPECIAL_BOMB ? a : b;
+    const vortexPos = bombPos === a ? b : a;
+    const targetColor = board[bombPos.row][bombPos.col]; // 爆炸宝石的颜色
+
+    // 清除两个特殊宝石的标记
+    special[bombPos.row][bombPos.col] = SPECIAL_NONE;
+    special[vortexPos.row][vortexPos.col] = SPECIAL_NONE;
+
+    // 收集消除范围：漩涡全场同色 + 爆炸3x3
+    const toRemoveSet = new Set();
+
+    // 漩涡效果：全场该颜色
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c] === targetColor) {
+                toRemoveSet.add(`${r},${c}`);
+            }
+        }
+    }
+
+    // 爆炸效果：3x3范围
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const nr = bombPos.row + dr;
+            const nc = bombPos.col + dc;
+            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                toRemoveSet.add(`${nr},${nc}`);
+            }
+        }
+    }
+
+    // 确保漩涡自身也被消除
+    toRemoveSet.add(`${vortexPos.row},${vortexPos.col}`);
+    toRemoveSet.add(`${bombPos.row},${bombPos.col}`);
+
+    const finalRemove = Array.from(toRemoveSet).map(s => {
+        const [r, c] = s.split(',').map(Number);
+        return { row: r, col: c };
+    });
+
+    renderBoard();
+    await animateMatches(finalRemove);
+
+    const baseScore = finalRemove.length * 10;
+    score += baseScore;
+    updateUI();
+    showComboWord(comboCount);
+
+    clearCells(finalRemove);
+    dropTiles();
+    fillEmpty();
+    renderBoard();
+    await delay(300);
+
     await checkChain();
 }
 
